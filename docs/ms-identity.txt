@@ -1,5 +1,6 @@
-# Graph API
+# Microsoft Identity Platform and Authentication
 MS Teams uses the MS Graph API
+Authentication must first happen with the Identity Platform
 
 ## Overview
   To access teams and send messages, we need to access the MS Graph API
