@@ -36,26 +36,14 @@ from flask import Flask, request
 import yaml, sys
 import azureauth
 import misthandler
-
+from config import GLOBAL
 
 
 
 # Import configuration details
-try:
-    f = open('config.yaml')
-    try:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    except yaml.YAMLError as err:
-        print('Error parsing config file, exiting')
-        print('Check the YAML formatting at https://yaml-online-parser.appspot.com/')
-        sys.exit()
-except Exception as e:
-    print ('Error opening the config file, exiting')
-    print (e)
-    sys.exit()
+WEB_PORT = GLOBAL['web_port']
+WEBHOOK_SECRET = GLOBAL['webhook_secret']
 
-WEB_PORT = config['global']['web_port']
-WEBHOOK_SECRET = config['global']['webhook_secret']
 
 
 # Initialise a Flask app
