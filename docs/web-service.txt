@@ -25,7 +25,7 @@
   (2) Find an alternative to saving the token in a file; Variables don't work simply between Flask routes
 
 ### Global
-  (1) Read configuration file, and set variables
+  (1) Read configuration file (using config.py), and set variables
   (2) Initialize a Flask app
   (3) Begin authentication
   (4) Start the Flask routes
