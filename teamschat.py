@@ -11,13 +11,14 @@ Authentication:
 Restrictions:
     Requires the requests module (pip install requests)
     Requires a bearer token to be separately generated
+    There is a limit to the API calls made to Graph before throttling occurs (https://learn.microsoft.com/en-us/graph/throttling)
+    Uses the 'azureauth' custom module to attempt to refresh the token when necessary
 
 To Do:
-    Add try/except to API calls
     Dynamically get the chat ID from somewhere
     Get the UserID dynamically
-    Figure out how to handle new lines in strings
-        Teams is ignoring '\n'
+    Add a timestamp to events
+
 
 Author:
     Luke Robertson - October 2022
@@ -25,27 +26,73 @@ Author:
 
 
 import requests
+from config import GRAPH
+import json
+from  datetime import datetime
 
-BASE_URL = 'https://graph.microsoft.com/v1.0/'
-endpoint = BASE_URL + 'chats'
+
+def send_chat(message):
+    '''takes a message, and sends it to a teams chat
+    requires that a bearer token has already been allocated, and saved in token.txt'''
+    # Make sure authentication is complete first
+    with open('token.txt') as f:
+        data = str(f.read())
+    
+    full_token = json.loads(str(data))
+
+    # Check that we have a token
+    if full_token == '':
+        print ('alert received, but we have no teams token')
 
 
-def send_chat(token, message):
-    headers = {"Content-Type": "application/json", "Authorization": token}
-    user_id = '1f53061b-8d51-49ac-9c8a-bbf1cebd5ab6'
-    chat_id = '19:847516a419864851b24cb9f7e8a6426b@thread.v2'
+    # Setup standard REST details for the API call
+    time = datetime.now().strftime("%I:%M%p").lower()
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": full_token['access_token']
+            }
+    endpoint = GRAPH['base_url'] + 'chats'
 
     body = {
         "body": {
-            "content": message
+            "contentType": "html",
+            "content": f"({time}): {message}"
         }
     }
 
-    response = requests.post(endpoint + '/' + chat_id + '/messages', json = body, headers=headers)
 
-    print ("Response: ", response.status_code)
+    # Attempt sending to the Graph API
+    try:
+        response = requests.post(endpoint + '/' + GRAPH['chat_id'] + '/messages', json = body, headers=headers)
+    except Exception as e:
+        print ('An error has occurred connecting to the Graph API')
+        print ('error: ', e)
+
+
+    # Handle responses
     jsonResponse = response.json()
-    print (jsonResponse)
+    match response.status_code:
+        case 200:
+            pass
+
+        case 201:
+            pass
+
+        case 401:
+            print ('Error: Access to the Graph API (MS-Teams) has not been authorized')
+            print ('Code: ', jsonResponse['error']['code'])
+            print ('Message: ', jsonResponse['error']['message'])
+
+        case 429:
+            print ('Error: There have been too many calls to the Graph API')
+            print ('Code: ', jsonResponse['error']['code'])
+            print ('Message: ', jsonResponse['error']['message'])
+            print (response.headers)
+
+        case default:
+            print ("Error. API Response code: ", response.status_code)
+            print (jsonResponse)
 
 
 

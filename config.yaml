@@ -1,0 +1,15 @@
+---
+# Note: indendentation is important
+# Verify formatting here: https://yaml-online-parser.appspot.com/
+
+# Global settings, applying to the web server
+global:
+  web_port: 8080
+  webhook_secret: 'Password00'
+
+# MS Graph API settings
+graph:
+  base_url: 'https://graph.microsoft.com/v1.0/'
+  user_id: '1f53061b-8d51-49ac-9c8a-bbf1cebd5ab6'
+  chat_id: '19:847516a419864851b24cb9f7e8a6426b@thread.v2'
+
