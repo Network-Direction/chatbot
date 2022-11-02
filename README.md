@@ -1,5 +1,5 @@
 # chatbot
-A simple chatbot that takes alerts and events, and sends them to teams
+A simple Network assistant that takes alerts and events, and sends them to teams
 
 
 ### Script Usage:
@@ -21,19 +21,17 @@ A simple chatbot that takes alerts and events, and sends them to teams
     Needs a public IP for webhooks to be sent to, and for the callback URL
     The public IP and port (tcp/8080 by default) needs to be allowed into the application (check firewall settings)
 
+### Notes:
+    Global configuration is done in config.yaml
+    Mist filtering is done in filter-mist.yaml (this filters the events sent to Teams)
+
 ### To Do:
-    - Add timestamps to events
     - See why a user sometimes gets prompted with two login pages
     - Find a more secure way to store the token
-    - Find a more scalable way to filter output to teams
-    - Enable Microsoft token refresh
-    - Handle token errors (eg, a token can't be granted)
-    - Check for errors when making API calls to Graph API (teams)
     - Dynamically get Chat ID and User ID, rather than hardcoding in a variable
-    - Figure out how to make the teams chats look nicer
 
 ### Author:
-    Luke Robertson - October 2022
+    Luke Robertson - November 2022
 
 
 
