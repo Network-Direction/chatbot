@@ -98,3 +98,34 @@ Mist sends events via webhooks to /mist
       - Level 4 is ignored completely
       - Adjust the priority levels in filter-mist.yaml
   
+  
+## filter-mist.yaml
+  A YAML formatted file used to filter events received from Mist
+  There are two ways events can be filtered:
+  - A text string filter: Filters out any string that matches
+  - Priority levels: Assigns levels to different events, so they can be handled in different ways
+  
+### Event Levels
+  - Level 1 has all details sent to teams
+  - Level 2 has a summary sent to teams
+  - Level 3 logs to terminal only
+  - Level 4 is ignored completely
+  - Any event not listed is implicitly considered to be level 1
+  
+### Assigning Levels
+  The YAML file has heading for the supported event types
+  - device_event
+  - audit
+  - alarm
+  - updown
+  
+  Under each of these are the event names. The field within the raw webhook that contains the even name varies depending on the event type
+  Each event name is paired with a value from 1 to 4, which represents the priority level
+  
+### Filtering Strings
+  The 'filter' heading is a list, with each member item being a string
+  Any string listed here is filtered out, regardless of the event level
+  This is useful to prevent the chatbot from sending certain events to Teams, so you don't get drowned in events
+  At this time, there is no support for regex. It's just a simple string
+  
+
