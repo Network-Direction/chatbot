@@ -23,12 +23,12 @@ A simple Network assistant that takes alerts and events, and sends them to teams
 
 ### Notes:
     Global configuration is done in config.yaml
-    Mist filtering is done in filter-mist.yaml (this filters the events sent to Teams)
+    Mist configuration filtering is done in mist-config.yaml (this filters the events sent to Teams)
 
 ### To Do:
-    - See why a user sometimes gets prompted with two login pages
     - Find a more secure way to store the token
     - Dynamically get Chat ID and User ID, rather than hardcoding in a variable
+    - Support secure SMTP with StartTLS and authentication
 
 ### Author:
     Luke Robertson - November 2022
