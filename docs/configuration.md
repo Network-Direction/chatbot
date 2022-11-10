@@ -6,12 +6,15 @@
 
 ## config.py
 ### Global
-(1) Creates two dictionaries:  
+(1) Creates three dictionaries:  
 * GRAPH - Contains settings for Graph API  
 * GLOBAL - Contains settings for the web-service  
+* SMTP - Contains settings for the SMTP server
     
 (2) Reads config.yaml  
 * Stores setting in the dictionaries  
+    
+    
     
 &nbsp;<br>
 - - - -
@@ -38,5 +41,18 @@ user_id
 chat_id  
 * The chat ID of the Teams chat that messages are sent to  
   
+&nbsp;<br>
+### SMTP
+This is used to send an email alert if there is a problem connecting to Teams  
+This is not used for general notifications
+&nbsp;<br>
+server
+* The name or IP address of the SMTP server
+port
+* The destination port of the SMTP server (eg, 25)
+sender
+* The sending email address
+receivers
+* A list of addresses that receive the alert
 
 
