@@ -1,12 +1,15 @@
 # Mist Webhooks
 Mist sends events via webhooks to /mist  
 
+&nbsp;<br>
 ## Authentication
   By default, webhooks are sent unauthenticated  
   Mist supports including a secret, which this app requires  
   Mist will hash the body of the webhook message, with the secret, and attach it as the 'X-Mist-Signature-V2' header  
   Authenticating these messages is achieved by running the same algorithm (HMAC-SHA256), and comparing the hash with the header  
-  
+
+&nbsp;<br>
+- - - -
 ## Event Types
   Mist support several event types. Webhooks can be configured to send only a subset of these as needed  
   This app currently supports:  
@@ -14,12 +17,15 @@ Mist sends events via webhooks to /mist
     - Audits  
     - Device Status  
     - Device Events  
-  
+
+&nbsp;<br>
+- - - -
 ## Mist Configuration
   Webhooks can be enabled globally and/or per-site  
   Global webhooks apply to the entire tenant. For example, logins, changes to global config, etc  
   Site based webhooks send information about the site, such as device failures, etc  
 
+&nbsp;<br>
 ### Global Settings
   In Organization > Settings > Webhooks, tick the 'Enable' box  
   Add a Name (anything is fine)  
@@ -27,6 +33,7 @@ Mist sends events via webhooks to /mist
   Set the secret  
   Enable the events you need  
 
+&nbsp;<br>
 ### Site Settings
   In Organization > Site Settings, select the site you want to enable webhooks for  
   Under 'Webhooks', tick the 'Enable'box  
@@ -34,13 +41,18 @@ Mist sends events via webhooks to /mist
   Enable the events you want to monitor  
   
 
+&nbsp;<br>
+- - - -
 ## misthandler.py
 ### To Do
   (1) Some webhooks come through twice, duplicating logs; Try to filter these out  
 
+
+&nbsp;<br>
 ### Global
   Creates an empty dictionary that contains the alert levels  
   
+
 ### auth_message()
   Arguments:  
     secret - The secret, as defined in the config.yaml file  
@@ -97,14 +109,25 @@ Mist sends events via webhooks to /mist
       - Level 3 logs to terminal only  
       - Level 4 is ignored completely  
       - Adjust the priority levels in filter-mist.yaml  
+    (5) If needed, send a message to Teams
+    (6) Log entries to SQL
   
   
-## filter-mist.yaml
-  A YAML formatted file used to filter events received from Mist  
-  There are two ways events can be filtered:  
-  - A text string filter: Filters out any string that matches  
-  - Priority levels: Assigns levels to different events, so they can be handled in different ways  
+## mist-config.yaml
+A YAML formatted file used to configure the Mist plugin and filter events received from  
+Configuration contains a field called 'debug
+* This can be set to True or False
+* If true, entries are logged to mist_debug-<date>.log
   
+### Filtering
+There are two ways events can be filtered:  
+* A text string filter: Filters out any string that matches  
+* Priority levels: Assigns levels to different events, so they can be handled in different ways  
+Events can have a subpriority assigned
+* For example, the SW_DOT1XD_USR_AUTHENTICATED may have a level of 3; However, there may be a sub priority of 1 assigned to 'vlan 10'
+* This means that if the text 'vlan 10' exists in this event, it will get assigned to level 1
+
+&nbsp;<br>
 ### Event Levels
   - Level 1 has all details sent to teams  
   - Level 2 has a summary sent to teams  
@@ -112,6 +135,7 @@ Mist sends events via webhooks to /mist
   - Level 4 is ignored completely  
   - Any event not listed is implicitly considered to be level 1  
   
+&nbsp;<br>
 ### Assigning Levels
   The YAML file has heading for the supported event types  
   - device_event  
@@ -122,6 +146,7 @@ Mist sends events via webhooks to /mist
   Under each of these are the event names. The field within the raw webhook that contains the even name varies depending on the event type  
   Each event name is paired with a value from 1 to 4, which represents the priority level  
   
+&nbsp;<br>
 ### Filtering Strings
   The 'filter' heading is a list, with each member item being a string  
   Any string listed here is filtered out, regardless of the event level  
