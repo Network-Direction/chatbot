@@ -34,6 +34,7 @@ This is not intended to be used for regular notifications
 ### send_mail()
 Arguments: message  
 * The message that should be converted to an email  
+
 Returns: None  
 Purpose: Takes a message, and converts it to MIMEText. Then sends email using the details in config.yaml  
 
