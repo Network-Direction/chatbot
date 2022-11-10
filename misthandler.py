@@ -16,19 +16,26 @@ Restrictions:
 To Do:
     Some webhooks come through twice; Only send one to teams
         eg: Level 2 event: {'event': 'alarm', 'count': 1, 'devices': ['EDG-NET-WAP-1'], 'site': 'Edgeworth Library', 'type': 'device_reconnected', 'level': 2}
+    Stop updating 'global' variables in the get_config() function
 
 Author:
     Luke Robertson - October 2022
 """
 
-import teamschat
+import teamschat, mistdebug, sql
 import hmac, hashlib
 import yaml
 import sys
+from datetime import datetime
+import socket, struct
+
+
 
 
 # Empty dictionary for alert levels
 alert_levels = {}
+logfile = ''
+
 
 
 # Authenticate if a message was genuine
@@ -61,14 +68,15 @@ def auth_message(secret, webhook):
 
 
 # Assign a priority to each alert (1-4)
-# definitions are in filter-mist.yaml
-def get_alerts():
-    '''Reads the filter-mist.yaml file, to learn the priorities assigned to each alert'''
+# definitions are in mist-config.yaml
+def get_config():
+    '''Reads the mist-config.yaml file, to learn the priorities assigned to each alert'''
     global alert_levels
+    global logfile
 
     # Read the YAML file
     try:
-        f = open('filter-mist.yaml')
+        f = open('mist-config.yaml')
         
         # Load the contents into alert_levels
         try:
@@ -86,16 +94,33 @@ def get_alerts():
         print (e)
         sys.exit()
 
+    if alert_levels['config']['debug'] == True:
+        logfile = mistdebug.logging_init()
+
 
 
 # Each alert has a different priority, which admins assign
-# These priorities are defined in filter-mist.yaml
+# These priorities are defined in mist-config.yaml
 def alert_priority(event):
     '''Takes given events, and adds a priority level'''
     match event['event']:
         case 'device_event':
             if event['type'] in alert_levels['device_event']:
-                event['level'] = alert_levels['device_event'][event['type']]
+                # Check if this alert has a subpriority (the 'default' keyword must be there)
+                if 'default' in str(alert_levels['device_event'][event['type']]):
+                    # Set the default priority
+                    event['level'] = alert_levels['device_event'][event['type']]['default']
+
+                    # Check if there is a more specific priority
+                    for entry in alert_levels['device_event'][event['type']]:
+                        if entry == 'default':
+                            break
+                        if entry in event['text']:
+                            event['level'] = alert_levels['device_event'][event['type']][entry]
+
+                # An alert with no sub priority
+                else:
+                    event['level'] = alert_levels['device_event'][event['type']]
             else:
                 event['level'] = 1
 
@@ -142,7 +167,10 @@ def alert_parse(raw_response):
                 details['name'] = event['device_name']
                 details['type'] = event['device_type']
                 details['mac'] = event['mac']
-                details['site'] = event['site_name']
+                if 'site_name' in event:
+                    details['site'] = event['site_name']
+                else:
+                    details['site'] = 'No site listed'
                 details['type'] = event['type']
                 if 'text' in event:
                     details['text'] = event['text']
@@ -153,9 +181,12 @@ def alert_parse(raw_response):
             for event in raw_response['events']:
                 details['event'] = 'alarm'
                 details['count'] = event['count']
-                details['devices'] = event['hostnames']
                 details['site'] = event['site_name']
                 details['type'] = event['type']
+                if 'hostnames' in event:
+                    details['devices'] = event['hostnames']
+                else:
+                    details['devices'] = 'No device listed'
 
         case 'audits':
             for event in raw_response['events']:
@@ -167,6 +198,8 @@ def alert_parse(raw_response):
                 
                 if 'after' in event:
                     details['after'] = event['after']
+                else:
+                    details['after'] = "No details available"
                 
                 if 'admin_name' in event:
                     details['admin'] = event['admin_name']
@@ -195,17 +228,23 @@ def alert_parse(raw_response):
 
 # Handle an event, whatever it may be
 # Takes the event, which needs parsing
-def handle_event(raw_response):
+def handle_event(raw_response, src, sql_connector):
     '''takes a raw event from Mist, and handles it as appropriate
     This includes parsing the event, assigning a priority, and possibly sending it to teams'''
+    
     # Parse the message
     event = alert_parse(raw_response)
+
 
     # Read the YAML file to find out how to handle certain events
     # Only do this the first time, don't repeat it every time
     if alert_levels == {}:
         print ('reading YAML for the first time')
-        get_alerts()
+        get_config()
+        
+
+    if alert_levels['config']['debug'] == True:
+        mistdebug.log_entry(str(event), logfile)
 
 
     # Filter events
@@ -219,6 +258,9 @@ def handle_event(raw_response):
 
     # Add the event level (1-4) to the 'event'
     alert_priority(event)
+
+    # Add the source IP to the event
+    event['src_ip'] = src
 
 
     # Handle device events
@@ -235,20 +277,39 @@ def handle_event(raw_response):
             
             case 3:
                 print ('Level 3 event:', event)
-        
-    
+
+
     # Handle audit events
     elif event['event'] == 'audit':
         match event['level']:
             case 1:
                 if 'before' in event:
-                    message = f"<b><span style=\"color:Yellow\">{event['admin']}</span></b> just made a change to the <span style=\"color:Lime\"><b>{event['site']}</b></span> site<br> The completed task was: <b><span style=\"color:Orange\">{event['task']}</span></b>.<br> Previous config: {event['before']}<br> New config: {event['after']}"
+                    # Clean up the 'before' config
+                    previous = str(event['before'])
+                    previous = previous.replace("\"\", ", "")
+                    previous = previous.replace(",", "<br>")
+                    previous = previous.replace("[", "")
+                    previous = previous.replace("\"\"]", "")
+                    previous = previous.replace("{", "")
+                    previous = previous.replace("}", "")
+
+
+                    # Clean up the 'after' config
+                    new = str(event['after'])
+                    new = new.replace("\"\", ", "")
+                    new = new.replace(",", "<br>")
+                    new = new.replace("[", "")
+                    new = new.replace("\"\"]", "")
+                    new = new.replace("{", "")
+                    new = new.replace("}", "")
+                    
+                    message = f"<b><span style=\"color:Yellow\">{event['admin']}</span></b> just worked on the <span style=\"color:Lime\"><b>{event['site']}</b></span> site<br> The completed task was: <b><span style=\"color:Orange\">{event['task']}</span></b>.<br> Previous config: <br>{previous}<br> <br>New config: <br>{new}"
                 else:
-                    message = f"<b><span style=\"color:Yellow\">{event['admin']}</span></b> just made a change to the <span style=\"color:Lime\"><b>{event['site']}</b></span> site.<br> The completed task was: <b><span style=\"color:Orange\">{event['task']}</span></b>"
+                    message = f"<b><span style=\"color:Yellow\">{event['admin']}</span></b> worked on to the <span style=\"color:Lime\"><b>{event['site']}</b></span> site.<br> The completed task was: <b><span style=\"color:Orange\">{event['task']}</span></b>"
                 print ('Level 1 event:', event)
             
             case 2:
-                message = f"<b><span style=\"color:Yellow\">{event['admin']}</span></b> just made a change to the <span style=\"color:Lime\"><b>{event['site']}</b></span> site."
+                message = f"<b><span style=\"color:Yellow\">{event['admin']}</span></b> worked on to the <span style=\"color:Lime\"><b>{event['site']}</b></span> site."
                 print ('Level 2 event:', event)
             
             case 3:
@@ -292,7 +353,57 @@ def handle_event(raw_response):
 
 
     # Send the message to Teams
+    chat_id = ''
     if message:
-        teamschat.send_chat(message)
+        chat_id = teamschat.send_chat(message)['id']
 
+
+    # Write the entry to the database
+    if event['level'] != 4:
+        print (event)
+
+        date = datetime.now().date()
+        time = datetime.now().time().strftime("%H:%M:%S")
+        ip_decimal = ip2integer(event['src_ip'])
+
+        if event['event'] == 'device_event':
+            device = event['name']
+            description = event['text']
+            type = event['type']
+        
+        elif event['event'] == 'alarm':
+            device = ''
+            for mist_device in event['devices']:
+                device += ', ' + mist_device
+            description = ''
+            type = event['type']
+        
+        elif event['event'] == 'audit':
+            device = ''
+            description = event['task'].replace("[", "").replace("]", "").replace("'", "")
+            type = event['task'].split(" ", 1)[0]
+
+
+        fields = {
+            'device': f"'{device}'", 
+            'site': f"'{event['site']}'",
+            'event': f"'{type}'",
+            'description': f"'{description}'",
+            'logdate': f"'{date}'", 
+            'logtime': f"'{time}'",
+            'source': f"{ip_decimal}",                     # IP address needs to be expressed as decimal
+            'message': f"'{chat_id}'" 
+        }
+
+        sql.add('mist_events', fields, sql_connector)
+
+
+
+
+def ip2integer(ip):
+    """
+    Convert an IP string to long integer
+    """
+    packedIP = socket.inet_aton(ip)
+    return struct.unpack("!L", packedIP)[0]
 

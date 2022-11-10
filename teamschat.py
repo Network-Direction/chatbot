@@ -3,6 +3,8 @@ Connects to the Microsoft Graph API, and interacts with MS-Teams chats
 
 Usage:
     import 'teamschat' as a module
+    Returns the chat ID of the teams message if successful
+    Returns False if unsuccessful
 
 Authentication:
     OAuth 2.0
@@ -17,7 +19,6 @@ Restrictions:
 To Do:
     Dynamically get the chat ID from somewhere
     Get the UserID dynamically
-    Add a timestamp to events
 
 
 Author:
@@ -29,6 +30,8 @@ import requests
 from config import GRAPH
 import json
 from  datetime import datetime
+import smtp
+
 
 
 def send_chat(message):
@@ -43,6 +46,7 @@ def send_chat(message):
     # Check that we have a token
     if full_token == '':
         print ('alert received, but we have no teams token')
+
 
 
     # Setup standard REST details for the API call
@@ -69,30 +73,36 @@ def send_chat(message):
         print ('An error has occurred connecting to the Graph API')
         print ('error: ', e)
 
+    chat_id = json.loads(response.content)
 
     # Handle responses
     jsonResponse = response.json()
     match response.status_code:
         case 200:
-            pass
+            return chat_id
 
         case 201:
-            pass
+            return chat_id
 
         case 401:
             print ('Error: Access to the Graph API (MS-Teams) has not been authorized')
             print ('Code: ', jsonResponse['error']['code'])
             print ('Message: ', jsonResponse['error']['message'])
+            smtp.send_mail("Network Assistant cannot send to teams; Not Authorized\n")
+            return False
+
 
         case 429:
             print ('Error: There have been too many calls to the Graph API')
             print ('Code: ', jsonResponse['error']['code'])
             print ('Message: ', jsonResponse['error']['message'])
             print (response.headers)
+            return False
 
         case default:
             print ("Error. API Response code: ", response.status_code)
             print (jsonResponse)
+            return False
 
 
 

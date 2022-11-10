@@ -22,11 +22,13 @@ Author:
 
 import sys
 import yaml
+from datetime import datetime
 
 
 # Define the dictionaries we're going to use
 GRAPH = {}
 GLOBAL = {}
+SMTP = {}
 
 
 # Open the YAML file, and store in the 'config' variable
@@ -47,4 +49,7 @@ except Exception as e:
 # Update our dictionaries with the config
 GLOBAL = config['global']
 GRAPH = config['graph']
+SMTP = config['smtp']
+
+
 

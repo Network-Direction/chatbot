@@ -25,6 +25,7 @@ Restrictions:
 To Do:
     Move App ID, Secret, Tenant to config file
         Not sure how to do this with the app scope yet
+    Retry token refresh if it fails
 
 Author:
     Luke Robertson - October 2022
@@ -108,11 +109,11 @@ def save_token(access_token):
 
 
 # Schedule a token refresh, 5 minutes before the current one expires
-def schedule_refresh(expiry, refresh_token):
+def schedule_refresh(expiry, token):
     '''Schedules a refresh of the token
     takes the expiry time in seconds, and the refresh token'''
     print ('starting token refresh thread')
-    start_time = threading.Timer((expiry - 300), refresh_token, [refresh_token])
+    start_time = threading.Timer((expiry - 300), refresh_token, [token])
     start_time.start()
 
 

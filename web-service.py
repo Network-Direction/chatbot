@@ -19,10 +19,9 @@ Restrictions:
         TCP port is set in the WEB_PORT variable
     Currently no support for HTTPS natively; Use SSL offloading (eg, nginx, F5, NetScaler)
     A config file, config.yaml, must exist in the same directory as this script
+    NOTE: When using Flask debug mode, the authentication window opens twice; Apparently a known Flask issue
 
 To Do:
-    Figure out why user gets two auth web pages
-        Only happens when starting the service initially, not when refreshing
     Find an alternative to saving the token to a file
         Can't get variables to work between Flask routes
         My current solution is to save to disk, and read later
@@ -33,9 +32,11 @@ Author:
 
 
 from flask import Flask, request
-import yaml, sys
+from datetime import datetime
+
 import azureauth
 import misthandler
+import sql
 from config import GLOBAL
 
 
@@ -53,6 +54,10 @@ app = Flask(__name__)
 # Authenticate with Microsoft (for teams)
 print ('Calling client_auth')
 azureauth.client_auth()
+
+
+# Connect to the SQL database
+sql_connector = sql.connect(GLOBAL['db_server'], GLOBAL['db_name'])
 
 
 # Test URL - Used to confirm the service is running
@@ -88,8 +93,14 @@ def mist():
         print ("Unauthenticated webhook received")
         return ('Webhook received, no auth')
 
+    # Get the source IP of the sender - Use X-Forwarded-For header if it's available
+    if 'X-Forwarded-For' in request.headers:
+        source_ip = request.headers['X-Forwarded-For']
+    else:
+        source_ip = request.remote_addr
+
     # Get the Mist handler module to decide what to do with the request
-    misthandler.handle_event(request.json)
+    misthandler.handle_event(request.json, source_ip, sql_connector)
     
     return ('Webhook received')
 
@@ -98,6 +109,6 @@ def mist():
 
 # Start the Flask app
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=WEB_PORT)
+    app.run(debug=GLOBAL['flask_debug'], host='0.0.0.0', port=WEB_PORT)
 
 
