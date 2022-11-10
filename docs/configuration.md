@@ -30,6 +30,13 @@ web_port
 * The port the web server runs on. Set to 8080 by default  
 webhook_secret  
 * The secret (password) that must be set on webhook messages  
+flask_debug
+* Enables debug mode
+* This applies to Flask, as well as to SQL (log the query strings sent to the SQL server)
+db_server
+* The name or IP address of the database server
+db_name
+* The name of the database
 
 &nbsp;<br>
 ### Graph
