@@ -1,7 +1,7 @@
 # Configuration of the Network Assistant and Graph API
-There are several settings that are needed for Flask, and for Graph API
-These are configured in config.yaml, and read by config.py
-For example, web-server port number, API endpoint, etc
+  There are several settings that are needed for Flask, and for Graph API  
+  These are configured in config.yaml, and read by config.py  
+  For example, web-server port number, API endpoint, etc  
   
 
 ## config.py
