@@ -67,7 +67,7 @@ Mist sends events via webhooks to /mist
     This function repeats the process, generating a hash, and compares it to the one in the header  
   
 
-### get_alerts()
+### get_config()
   Arguments: None  
   Returns: None  
   Purpose:   
