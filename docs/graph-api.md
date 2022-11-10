@@ -23,3 +23,19 @@ Purpose:
   (2) Connect to the Graph API using the requests module  
   (3) Check the response, and handle 401 and 429 errors  
   
+
+
+&nbsp;<br>
+- - - -
+## smtp.py
+Used to alert someone if there's problems sending over teams  
+This is not intended to be used for regular notifications  
+
+### send_mail()
+Arguments: message  
+* The message that should be converted to an email  
+Returns: None  
+Purpose: Takes a message, and converts it to MIMEText. Then sends email using the details in config.yaml  
+
+
+
