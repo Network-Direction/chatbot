@@ -13,6 +13,10 @@ A simple Network assistant that takes alerts and events, and sends them to teams
     Authentication uses OAuth 2.0; You need an application ID and a client secret
     The callback is set to /callback
     A teams user needs to login when the web-service runs, and approve access to teams
+    
+### Plugins:
+    Plugins for specific webhook senders are sub-directories within the 'plugins' folder
+    Plugins are enabled in the config.yaml file
 
 ### Restrictions:
     Requires the Flask, msal, and requests modules to be installed with pip
