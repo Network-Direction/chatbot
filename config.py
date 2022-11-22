@@ -22,7 +22,6 @@ Author:
 
 import sys
 import yaml
-from datetime import datetime
 
 
 # Define the dictionaries we're going to use
@@ -38,11 +37,13 @@ try:
         config = yaml.load(f, Loader=yaml.FullLoader)
     except yaml.YAMLError as err:
         print('Error parsing config file, exiting')
-        print('Check the YAML formatting at https://yaml-online-parser.appspot.com/')
+        print('Check the YAML formatting at \
+            https://yaml-online-parser.appspot.com/')
+        print(err)
         sys.exit()
 except Exception as e:
-    print ('Error opening the config file, exiting')
-    print (e)
+    print('Error opening the config file, exiting')
+    print(e)
     sys.exit()
 
 
@@ -50,6 +51,4 @@ except Exception as e:
 GLOBAL = config['global']
 GRAPH = config['graph']
 SMTP = config['smtp']
-
-
-
+PLUGINS = config['plugins']

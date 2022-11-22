@@ -5,21 +5,38 @@
 # Global settings, applying to the web server
 global:
   web_port: 8080
-  webhook_secret: 'Password00'
+  webhook_secret: 'Secret'
   flask_debug: True
-  db_server: 'dbserver01'
-  db_name: 'database01'
+  db_server: 'DBServer'
+  db_name: 'DBName'
+
+
+# Enabled plugins
+plugins:
+  mist:
+    name: 'Mist Webhooks'
+    route: 'mist'
+    class: MistHandler
+    module: plugins.mist.misthandler
+  junos:
+    name: 'Junos Webhooks'
+    route: 'junos'
+    class: JunosHandler
+    module: plugins.junos.junos
+
 
 # MS Graph API settings
 graph:
   base_url: 'https://graph.microsoft.com/v1.0/'
-  user_id: '1f53061b-8d51-49ac-9c8a-bbf1cebd5ab6'
+  user_id: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
   chat_id: '19:847516a419864851b24cb9f7e8a6426b@thread.v2'
 
+
+# SMTP server settings
 smtp:
-  server: 'smtp.mailserver.com'
+  server: 'mail.server.com'
   port: 25
-  sender: 'user@mailserver.com'
+  sender: 'user@server.com'
   receivers:
-    - 'user@mailserver.com'
-    - 'admin@mailserver.com'
+    - 'user@server.com'
+    - 'user2@server.com'
