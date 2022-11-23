@@ -10,12 +10,11 @@
    
 
 &nbsp;<br>
-### /mist
+### <handler>
 Method: POST  
-This is where Mist webhooks are sent 
-This also tracks the IP address of the webhook sender
-* Uses the X-Forwarded-For header, if it exists (good if there's a reverse proxy in the path)
-* Uses the IP address that sends to Flask, if the X-Forwarded-For header is not there
+This is a dynamic route, which is created based on plugins   
+Webhooks are sent to this location, and then authenticated using a header, as specified by the plugin   
+The plugins handler method is called to deal with the webhook
 
 
 &nbsp;<br>
@@ -30,8 +29,7 @@ This also tracks the IP address of the webhook sender
 - - - -
 ## web-service.py
 ### To Do
-  (1) Find out why users get presented with two authentication web screens when the process first starts  
-  (2) Find an alternative to saving the token in a file; Variables don't work simply between Flask routes  
+  Find an alternative to saving the token in a file; Variables don't work simply between Flask routes  
 
 
 &nbsp;<br>
@@ -39,4 +37,5 @@ This also tracks the IP address of the webhook sender
   (1) Read configuration file (using config.py), and set variables  
   (2) Initialize a Flask app  
   (3) Begin authentication  
-  (4) Start the Flask routes  
+  (4) Load plugins
+  (5) Start the Flask routes  
