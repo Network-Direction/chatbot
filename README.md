@@ -4,7 +4,7 @@ A simple Network assistant that takes alerts and events, and sends them to teams
 
 ### Script Usage:
     Run this application with 'python web-service.py' to start a Flask instance
-    Mist webhooks can be sent (POST) to /mist
+    Webhooks can be sent (POST) to a route, as defined by each plugin
     Test the application by browsing to /test
     Uses the MS Graph API to send chat messages to teams
     
