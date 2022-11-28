@@ -24,8 +24,6 @@ Restrictions:
         Needs a Callback URL configured (localhost is ok)
 
 To Do:
-    Move App ID, Secret, Tenant to config file
-        Not sure how to do this with the app scope yet
     Retry token refresh if it fails
 
 Author:
@@ -36,12 +34,14 @@ Author:
 import webbrowser
 from msal import ConfidentialClientApplication
 import threading
+from config import TEAMS
+from config import plugin_list
 
 
 # Application info and required permissions
-APPLICATION_ID = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-CLIENT_SECRET = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-TENANT = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+APPLICATION_ID = TEAMS['app_id']
+CLIENT_SECRET = TEAMS['secret']
+TENANT = TEAMS['tenant']
 SCOPES = ['ChatMessage.Send', 'Chat.ReadWrite', 'Chat.ReadBasic', 'Chat.Read']
 
 # The login URL for client authentication
@@ -91,6 +91,11 @@ def refresh_token(token):
         schedule_refresh(access_token['expires_in'],
                          access_token['refresh_token'])
 
+    # Take this opportunity to refresh the config for each plugin
+    for plugin in plugin_list:
+        print(f"Refreshing plugin config: {plugin}")
+        plugin['handler'].refresh()
+
 
 # Save the token to a file
 def save_token(access_token):
@@ -99,9 +104,8 @@ def save_token(access_token):
     temp = str(access_token).replace("'", "\"")
 
     # Write the token information to a file (overwrite previous contents)
-    f = open("token.txt", "w")
-    f.write(temp)
-    f.close()
+    with open("token.txt", "w") as file:
+        file.write(temp)
 
 
 # Schedule a token refresh, 5 minutes before the current one expires
