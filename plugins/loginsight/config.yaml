@@ -1,0 +1,9 @@
+# Note: indendentation is important
+# Verify formatting here: https://yaml-online-parser.appspot.com/
+
+# This file contains configuration information for the junos plugin
+
+config:
+  webhook_secret: 'Secret'
+  auth_header: ''
+
