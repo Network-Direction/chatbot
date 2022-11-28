@@ -7,8 +7,8 @@ global:
   web_port: 8080
   webhook_secret: 'Secret'
   flask_debug: True
-  db_server: 'DBServer'
-  db_name: 'DBName'
+  db_server: 'My_Server'
+  db_name: 'My_DB'
 
 
 # Enabled plugins
@@ -23,20 +23,32 @@ plugins:
     route: 'junos'
     class: JunosHandler
     module: plugins.junos.junos
+  loginsight:
+    name: 'Log Insight'
+    route: 'loginsight'
+    class: LogInsight
+    module: plugins.loginsight.log_insight
 
 
 # MS Graph API settings
 graph:
   base_url: 'https://graph.microsoft.com/v1.0/'
-  user_id: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-  chat_id: '19:847516a419864851b24cb9f7e8a6426b@thread.v2'
+  user_id: 'xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+  chat_id: '19:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@thread.v2'
+
+
+# MS Teams Settings
+teams:
+  app_id: 'xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+  secret: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  tenant: 'xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 
 
 # SMTP server settings
 smtp:
-  server: 'mail.server.com'
+  server: 'my_smtp_server'
   port: 25
-  sender: 'user@server.com'
+  sender: 'my@email.com'
   receivers:
-    - 'user@server.com'
-    - 'user2@server.com'
+    - 'my@email.com'
+    - 'your@email.com'
