@@ -26,7 +26,6 @@ To Do:
     Find an alternative to saving the token to a file
         Can't get variables to work between Flask routes
         My current solution is to save to disk, and read later
-    Move webhook authentication to be per-plugin
 
 Author:
     Luke Robertson - November 2022
@@ -34,17 +33,15 @@ Author:
 
 
 from flask import Flask, request
-from core import azureauth, sql, hash
+from core import azureauth, hash
 from config import GLOBAL
-from config import PLUGINS
+from config import PLUGINS, plugin_list
 import importlib
 from core import teamschat
 
 
 # Load plugins
-def load_plugins():
-    plugin_list = []
-
+def load_plugins(plugin_list):
     for plugin in PLUGINS:
         print(f"Loading plugin: {PLUGINS[plugin]['name']}")
 
@@ -72,8 +69,6 @@ def load_plugins():
         }
         plugin_list.append(plugin_entry)
 
-    return plugin_list
-
 
 # Import configuration details
 WEB_PORT = GLOBAL['web_port']
@@ -84,18 +79,14 @@ WEBHOOK_SECRET = GLOBAL['webhook_secret']
 app = Flask(__name__)
 
 
+# Setup the Mist handler object
+load_plugins(plugin_list)
+print(f"Plugins: {plugin_list}")
+
+
 # Authenticate with Microsoft (for teams)
 print('Calling client_auth')
 azureauth.client_auth()
-
-
-# Connect to the SQL database
-sql_connector = sql.connect(GLOBAL['db_server'], GLOBAL['db_name'])
-
-
-# Setup the Mist handler object
-plugin_list = load_plugins()
-print(f"Plugins: {plugin_list}")
 
 
 # Test URL - Used to confirm the service is running
@@ -153,8 +144,7 @@ def webhook_handler(handler):
 
             # Send this to the handler
             plugin['handler'].handle_event(raw_response=request.json,
-                                           src=source_ip,
-                                           sql_connector=sql_connector)
+                                           src=source_ip)
 
             # Return a positive response
             return ('Webhook received')
