@@ -23,9 +23,8 @@ Author:
 """
 
 from core import sql, teamschat
-from plugins.mist import mistdebug
+from plugins.mist.mistdebug import MistDebug
 import yaml
-import sys
 from datetime import datetime
 import socket
 import struct
@@ -42,12 +41,9 @@ class MistHandler:
         self.logfile = ''
 
         # Read the YAML file
-        try:
-            f = open(LOCATION)
-
-            # Load the contents into alert_levels
+        with open(LOCATION) as config:
             try:
-                self.alert_levels = yaml.load(f, Loader=yaml.FullLoader)
+                self.alert_levels = yaml.load(config, Loader=yaml.FullLoader)
 
             # Handle problems with YAML syntax
             except yaml.YAMLError as err:
@@ -55,16 +51,10 @@ class MistHandler:
                 print('Check the YAML formatting at \
                     https://yaml-online-parser.appspot.com/')
                 print(err)
-                sys.exit()
-
-        # Handle an error reading the file
-        except Exception as e:
-            print('Error opening the config file, exiting')
-            print(e)
-            sys.exit()
+                return False
 
         if self.alert_levels['config']['debug']:
-            self.logfile = mistdebug.logging_init()
+            self.log = MistDebug()
 
         # Setup webhook authentication
         self.auth_header = self.alert_levels['config']['auth_header']
@@ -213,7 +203,7 @@ class MistHandler:
 
     # Handle an event, whatever it may be
     # Takes the event, which needs parsing
-    def handle_event(self, raw_response, src, sql_connector):
+    def handle_event(self, raw_response, src):
         '''
         takes a raw event from Mist, and handles it as appropriate
         This includes parsing the event, assigning a priority,
@@ -224,7 +214,7 @@ class MistHandler:
         event = self.alert_parse(raw_response)
 
         if self.alert_levels['config']['debug']:
-            mistdebug.log_entry(str(event), self.logfile)
+            self.log.log_entry(str(event))
 
         # Filter events
         # These are just keywords that we want to avoid
@@ -269,23 +259,16 @@ class MistHandler:
             match event['level']:
                 case 1:
                     if 'before' in event:
-                        # Clean up the 'before' config
-                        previous = str(event['before'])
-                        previous = previous.replace("\"\", ", "")
-                        previous = previous.replace(",", "<br>")
-                        previous = previous.replace("[", "")
-                        previous = previous.replace("\"\"]", "")
-                        previous = previous.replace("{", "")
-                        previous = previous.replace("}", "")
+                        # Find the difference
+                        new = []
+                        for line in str(event['before']).split(", "):
+                            if line not in str(event['after']).split(", "):
+                                new.append(line)
 
-                        # Clean up the 'after' config
-                        new = str(event['after'])
-                        new = new.replace("\"\", ", "")
-                        new = new.replace(",", "<br>")
-                        new = new.replace("[", "")
-                        new = new.replace("\"\"]", "")
-                        new = new.replace("{", "")
-                        new = new.replace("}", "")
+                        previous = []
+                        for line in str(event['after']).split(", "):
+                            if line not in str(event['before']).split(", "):
+                                previous.append(line)
 
                         message = f"<b><span style=\"color:Yellow\"> \
                             {event['admin']}</span></b> just worked on the \
@@ -412,7 +395,24 @@ class MistHandler:
                 'message': f"'{chat_id}'"
             }
 
-            sql.add('mist_events', fields, sql_connector)
+            sql_conn = sql.Sql()
+            sql_conn.add('mist_events', fields)
+
+    # Refresh the alert levels
+    # Reread the config file
+    def refresh(self):
+        # Read the YAML file
+        with open(LOCATION) as config:
+            try:
+                self.alert_levels = yaml.load(config, Loader=yaml.FullLoader)
+
+            # Handle problems with YAML syntax
+            except yaml.YAMLError as err:
+                print('Error parsing config file, exiting')
+                print('Check the YAML formatting at \
+                    https://yaml-online-parser.appspot.com/')
+                print(err)
+                return False
 
 
 def ip2integer(ip):
