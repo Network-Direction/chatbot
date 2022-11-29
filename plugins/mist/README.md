@@ -33,6 +33,10 @@ Handles webhooks from the Juniper Mist cloud
 
 - - - -
 ## Files
+### sql_create.py
+    Standalone script that connects to the SQL server (as globally defined in the app)
+    Creates the table and required fields
+
 ### mistdebug.py
     Used when debugging is enabled
     Opens a log file, and writes entries to the file
@@ -58,5 +62,9 @@ Handles webhooks from the Juniper Mist cloud
     This uses other methods to parse, filter, and normalize events
     It creates a human readable message, which is sent to the user over teams
     It writes events to SQL
+    
+#### refresh()
+       Reads the config file again
+       This allows config to be updated without restarting Flask
 
 
