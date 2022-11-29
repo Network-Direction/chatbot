@@ -56,6 +56,15 @@ user_id
 * The user ID for the user that sends messages to teams  
 chat_id  
 * The chat ID of the Teams chat that messages are sent to  
+
+&nbsp;<br>
+### Teams
+app_id
+* The ID of the Teams application in the MS Identity portal
+secret
+* The secret (password) for the application
+tenant
+* The tenant's ID
   
 &nbsp;<br>
 ### SMTP
