@@ -5,6 +5,8 @@ Currently tested with MSSQL only
 
 &nbsp;<br>
 ## DB design
+This can vary per plugin, but most will follow a design similar to this
+
 Table Fields
 ------------
 
@@ -56,62 +58,20 @@ Chat message ID
 
 &nbsp;<br>
 - - - -
-## sql-create.py
-A standalone script to create the table and fields
-The server and database information is taken from config.yaml
-
-### connect()
-Arguments:  
-* server: The SQL server to connect to  
-* db: The database to connect to  
-Returns:  'conn' and 'cursor' as a tuple  
-* conn: The connection object to the SQL database  
-* cursor: The object that commits changes  
-Purpose:  Connect to an SQL server  
-
-### close()
-Arguments:  connector (the conn and cursor objects as a tuple)  
-Returns:  none  
-Purpose:  Gracefully close the connection to the SQL server/database  
-
-### create_table()
-Arguments:  
-* table: The table to write to  
-* fields: The fields (as a dictionary) to create  
-* connector: The sql connection object (as a tuple)  
-Returns:  True if successful, or False  
-Purpose:  Creates the table and fields
-
-
-&nbsp;<br>
-- - - -
 ## sql.py
-### To Do
-  (1) Add logging to text file if global DEBUG=True  
-  (2) Add a teardown function to Flask to gracefully close this connection  
+  Contains the Sql class, for writing events to the database.
+  The methods are outlined below
 
 &nbsp;<br>
-### connect()
-Arguments:  
-* server: The SQL server to connect to  
-* db: The database to connect to  
-Returns:  'conn' and 'cursor' as a tuple  
-* conn: The connection object to the SQL database  
-* cursor: The object that commits changes  
-Purpose:  Connect to an SQL server  
+### __init__()
+  Gets the server name and DB name from the config file
 
-&nbsp;<br>
-### close()
-Arguments:  connector (the conn and cursor objects as a tuple)  
-Returns:  none  
-Purpose:  Gracefully close the connection to the SQL server/database  
-
-&nbsp;<br>
 ### add()
 Arguments:  
-* table: The table name to write to  
-* fields: The columns and values, passed as a dictionary  
-* connector: The connection object (as a tuple) for the SQL server/DB  
-Returns: True if successful, or False  
-Purpose: Add event entries to the SQL server  
-  
+* table: The table to write to  
+* fields: The entries to write  
+Returns:  True if successful, False if not
+Purpose:  
+  Connect to the SQL server/database  
+  Write entries to the database
+  Gracefully close the connection
