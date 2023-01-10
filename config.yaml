@@ -5,10 +5,11 @@
 # Global settings, applying to the web server
 global:
   web_port: 8080
-  webhook_secret: 'Secret'
-  flask_debug: True
-  db_server: 'My_Server'
-  db_name: 'My_DB'
+  webhook_secret: 'password'
+  flask_debug: False
+  db_server: 'DB-Server'
+  db_name: 'DB-Name'
+  chatbot_name: 'Steve'
 
 
 # Enabled plugins
@@ -33,22 +34,23 @@ plugins:
 # MS Graph API settings
 graph:
   base_url: 'https://graph.microsoft.com/v1.0/'
-  user_id: 'xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-  chat_id: '19:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@thread.v2'
+  chat_id: '19:xxxx@thread.v2'
+  key_id: '123'
+  chat_url: 'https://my_domain.com/chat'
 
 
 # MS Teams Settings
 teams:
-  app_id: 'xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-  secret: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-  tenant: 'xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+  app_id: 'xxxx'
+  secret: 'xxxx'
+  tenant: 'xxxx'
+  user: 'user@my_domain.com'
 
 
 # SMTP server settings
 smtp:
-  server: 'my_smtp_server'
+  server: 'smtp.my_domain.com'
   port: 25
-  sender: 'my@email.com'
+  sender: 'user@my_domain.com'
   receivers:
-    - 'my@email.com'
-    - 'your@email.com'
+    - 'user@my_domain.com'
