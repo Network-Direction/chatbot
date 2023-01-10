@@ -17,24 +17,57 @@ Restrictions:
         (https://learn.microsoft.com/en-us/graph/throttling)
     Uses the 'azureauth' custom module to attempt to
         refresh the token when necessary
+    Only one public/private key-pair supported for encrypted chats
 
 To Do:
-    Dynamically get the chat ID from somewhere
-    Get the UserID dynamically
+    None
 
 
 Author:
-    Luke Robertson - October 2022
+    Luke Robertson - January 2023
 """
 
 
 import requests
 from config import GRAPH
 import json
-from datetime import datetime
-from core import smtp
+from datetime import datetime, timedelta
+import termcolor
+import threading
 
 
+public_key = ''
+private_key = ''
+
+
+# Check teams token is available
+def check_token():
+    '''
+    Checks there is a token available, and returns it
+    If it's not available, return an empty string
+    '''
+    with open('token.txt') as f:
+        data = str(f.read())
+
+    full_token = json.loads(str(data))
+
+    # Check that we have a token
+    if full_token == '':
+        print(termcolor.colored(
+            'alert received, but we have no teams token',
+            "red"))
+
+    return full_token
+
+
+# Get a new expiry time (now + 1 hour)
+# Used for subscriptions
+def get_expiry():
+    time = str(datetime.utcnow() + timedelta(hours=1))
+    return time.replace(" ", "T") + 'Z'
+
+
+# Send a messages to a teams chat
 def send_chat(message):
     '''
     takes a message, and sends it to a teams chat
@@ -43,67 +76,179 @@ def send_chat(message):
     '''
 
     # Make sure authentication is complete first
-    with open('token.txt') as f:
-        data = str(f.read())
-
-    full_token = json.loads(str(data))
-
-    # Check that we have a token
-    if full_token == '':
-        print('alert received, but we have no teams token')
+    full_token = check_token()
 
     # Setup standard REST details for the API call
-    time = datetime.now().strftime("%I:%M%p").lower()
-
     headers = {
         "Content-Type": "application/json",
         "Authorization": full_token['access_token']
-            }
+    }
     endpoint = GRAPH['base_url'] + 'chats'
 
+    # time = datetime.now().strftime("%I:%M%p").lower()
     body = {
         "body": {
             "contentType": "html",
-            "content": f"({time}): {message}"
+            # "content": f"({time}): {message}"
+            "content": message
         }
     }
 
-    # Attempt sending to the Graph API
-    try:
-        response = requests.post(endpoint + '/' + GRAPH['chat_id']
-                                 + '/messages', json=body, headers=headers)
-    except Exception as e:
-        print('An error has occurred connecting to the Graph API')
-        print('error: ', e)
-
+    # API Call
+    response = requests.post(endpoint + '/' + GRAPH['chat_id']
+                             + '/messages', json=body, headers=headers)
+    response.raise_for_status()
     chat_id = json.loads(response.content)
 
-    # Handle responses
-    jsonResponse = response.json()
     match response.status_code:
-        case 200:
+        case 200 | 201:
             return chat_id
-
-        case 201:
-            return chat_id
-
-        case 401:
-            print('Error: Access to the Graph API (MS-Teams) \
-                has not been authorized')
-            print('Code: ', jsonResponse['error']['code'])
-            print('Message: ', jsonResponse['error']['message'])
-            smtp.send_mail("Network Assistant cannot send to teams; \
-                Not Authorized\n")
-            return False
-
-        case 429:
-            print('Error: There have been too many calls to the Graph API')
-            print('Code: ', jsonResponse['error']['code'])
-            print('Message: ', jsonResponse['error']['message'])
-            print(response.headers)
-            return False
-
         case _:
-            print("Error. API Response code: ", response.status_code)
-            print(jsonResponse)
             return False
+
+
+# Subscribe to the group chat, so we can see when people send messages
+def subscribe():
+    '''
+    Subscribes to a Teams group for change notifications
+    Does not take any parameters
+    '''
+
+    # Schedule a refresh of the subscription
+    schedule_refresh()
+
+    # Make sure authentication is complete first
+    full_token = check_token()
+
+    # Read public and private keys
+    global public_key, private_key
+    with open('core\\public.pem', 'r') as file:
+        public_key = file.read()
+    with open('core\\private.pem', 'r') as file:
+        private_key = file.read()
+
+    # Strip back to raw keys
+    public_key = public_key.replace("-----BEGIN CERTIFICATE-----\n", "")
+    public_key = public_key.replace("\n-----END CERTIFICATE-----\n", "")
+    private_key = private_key.replace("-----BEGIN PRIVATE KEY-----\n", "")
+    private_key = private_key.replace("\n-----END PRIVATE KEY-----\n", "")
+
+    # Setup standard REST details for the API call
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": full_token['access_token']
+    }
+    endpoint = GRAPH['base_url']
+    id = GRAPH['chat_id']
+
+    # Check that we don't already have a subscription
+    if check_sub(f'/chats/{id}/messages'):
+        return
+
+    body = {
+        'resource': f'/chats/{id}/messages',
+        'notificationUrl': GRAPH['chat_url'],
+        'changeType': 'created',
+        'expirationDateTime': get_expiry(),
+        'encryptionCertificate': public_key,
+        'encryptionCertificateId': GRAPH['key_id'],
+        'includeResourceData': 'true'
+    }
+
+    # API Call
+    response = requests.post(
+        endpoint + '/subscriptions', json=body, headers=headers
+    )
+    response.raise_for_status()
+
+    returns = json.loads(response.content)
+    if 'error' in returns:
+        print(termcolor.colored(
+            f"An error has occurred subscribing to the teams chat:\n \
+            {returns['error']['code']}: {returns['error']['message']}",
+            "red"
+        ))
+    else:
+        print(termcolor.colored(
+            f"Subscribed to Teams chat: {returns['resource']}\n \
+            Expiry: {returns['expirationDateTime']}",
+            "green"
+        ))
+
+
+# Check if a subscription to the group chat already exists
+# We don't want to create extras if they're not needed
+def check_sub(id):
+    '''
+    Checks if there is already a subscription to a Teams group
+    Takes the resource ID to check
+    '''
+    # Make sure authentication is complete first
+    full_token = check_token()
+
+    # Setup standard REST details for the API call
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": full_token['access_token']
+    }
+    endpoint = GRAPH['base_url']
+
+    # API Call
+    response = requests.get(
+        endpoint + '/subscriptions', headers=headers
+    )
+    response.raise_for_status()
+
+    returns = json.loads(response.content)
+
+    # Check if we've already subscribed to this resource
+    value = returns['value']
+    for item in value:
+        if id == item['resource']:
+            print(termcolor.colored(
+                "Already subscribed for change notifications",
+                "yellow"
+            ))
+
+            print(termcolor.colored(
+                f"Resource: {item['resource']}\n \
+                    Expiry: {item['expirationDateTime']}\n \
+                    ID: {item['id']}",
+                "yellow"
+            ))
+
+            # Refresh the expiry time while we're here
+            body = {
+                'expirationDateTime': get_expiry()
+            }
+            response = requests.patch(
+                endpoint + f"/subscriptions/{item['id']}",
+                json=body,
+                headers=headers
+            )
+            print(termcolor.colored(
+                f"Resource Update: {response.json()['resource']}\n \
+                    Expiry: {response.json()['expirationDateTime']}\n \
+                    ID: {response.json()['id']}",
+                "yellow"
+            ))
+
+            return True
+
+    print(termcolor.colored(
+        "Not subscribed yet, subscribing now...",
+        "yellow"
+    ))
+    return False
+
+
+# Schedule a refresh of the subscription
+def schedule_refresh():
+    '''
+    Schedules a refresh of the subscription
+    takes the expiry time in seconds, and the refresh token
+    '''
+
+    print(termcolor.colored('starting subscription refresh thread', "green"))
+    start_time = threading.Timer(3300, subscribe)
+    start_time.start()

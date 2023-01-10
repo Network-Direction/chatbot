@@ -23,172 +23,98 @@ Author:
 import pyodbc
 from config import GLOBAL
 from core import teamschat
+import termcolor
 
 
-# Connect to a database
-#   Return the two SQL objects in a tuple
-#   Return False if there's an error
-def connect(server, db):
-    '''
-    Connects to an MSSQL database
-    Pass the server name and the DB name
-    Returns a connection object;
-    This is a tuple containing the cursor and connection
-    '''
-    try:
-        conn = pyodbc.connect(
-            'Driver={SQL Server};'
-            'Server=%s;'
-            'Database=%s;'
-            'Trusted_Connection=yes;'
-            % (server, db))
+class Sql():
+    # Initialise the class
+    def __init__(self):
+        self.server = GLOBAL['db_server']
+        self.db = GLOBAL['db_name']
 
-    except pyodbc.DataError as e:
-        print("A data error has occurred")
-        print(e)
-        teamschat.send_chat(
-            "A data error has occurred while connecting to SQL"
-        )
-        return False
+    # Add an entry to the SQL server
+    def add(self, table, fields):
+        # Create empty strings for columns and corresponding values
+        columns = ''
+        values = '('
 
-    except pyodbc.OperationalError as e:
-        print("An operational error has occurred while \
-            connecting to the database")
-        print("Make sure the specified server is correct, \
-            and that you have permissions")
-        teamschat.send_chat(
-            "An operational error has occurred while connecting to SQL"
-        )
-        teamschat.send_chat(e)
+        # Populate the columns and values
+        for field in fields:
+            columns += field + ', '
+            values += str(fields[field]) + ', '
 
-        # Parse the error code and message
-        error = str(e).split(",", 1)[1].split(";")[0].split("[")
-        code = error[1].replace("] ", "")
-        message = error[4].split("]")[1].split(".")[0]
+        # Clean up the trailing comma, to make this valid
+        columns = columns.strip(", ")
+        values = values.strip(", ")
 
-        # Print the error, and end the script
-        print(f"Error code: {code}\n{message}")
-        return False
+        # Build the correct string
+        sql_string = f'INSERT INTO {table} ('
+        sql_string += columns
+        sql_string += ')'
 
-    except pyodbc.IntegrityError as e:
-        print("An Integrity error has occurred")
-        print(e)
-        teamschat.send_chat(
-            "An integrity error has occurred while connecting to SQL"
-        )
-        teamschat.send_chat(e)
-        return False
+        sql_string += '\nVALUES '
+        sql_string += values + ');'
 
-    except pyodbc.InternalError as e:
-        print("An internal error has occurred")
-        print(e)
-        teamschat.send_chat(
-            "An internal error has occurred while connecting to SQL"
-        )
-        teamschat.send_chat(e)
-        return False
+        if GLOBAL['flask_debug']:
+            print(termcolor.colored(
+                f"DEBUG (sql.py): {sql_string}",
+                "magenta"))
 
-    except pyodbc.ProgrammingError as e:
-        print("A programming error has occurred")
-        print("Check that the database name is correct, \
-            and that the database exists")
-        teamschat.send_chat(
-            "A programming error has occurred while connecting to SQL"
-        )
-        teamschat.send_chat(e)
+        # Connect to db using 'with' (gracefully closes when done)
+        with pyodbc.connect(
+                'Driver={SQL Server};'
+                'Server=%s;'
+                'Database=%s;'
+                'Trusted_Connection=yes;'
+                % (self.server, self.db)) as self.conn:
+            self.cursor = self.conn.cursor()
 
-        # Parse the error code and message
-        error = str(e).split(",", 1)[1].split(";")[0].split("[")
-        code = error[1].replace("] ", "")
-        message = error[4].split("]")[1].split(".")[0]
+            try:
+                self.cursor.execute(sql_string)
+            except Exception as e:
+                print("SQL execution error")
+                print(e)
+                teamschat.send_chat(
+                    "An error has occurred while writing to SQL"
+                )
+                return False
 
-        # Print the error, and end the script
-        print(f"Error code: {code}\n{message}")
-        return False
+            try:
+                self.conn.commit()
+            except Exception as e:
+                print(termcolor.colored("SQL commit error", "red"))
+                print(e)
+                teamschat.send_chat(
+                    "An error has occurred while writing to SQL"
+                )
+                return False
+        return True
 
-    except pyodbc.NotSupportedError as e:
-        print("A 'not supported' error has occurred")
-        print(e)
-        teamschat.send_chat(
-            "A 'not supported' error has occurred while connecting to SQL"
-        )
-        teamschat.send_chat(e)
-        return False
+    # Read the last entry from the SQL server
+    def read_last(self, table):
+        # Connect to db using 'with' (gracefully closes when done)
+        with pyodbc.connect(
+                'Driver={SQL Server};'
+                'Server=%s;'
+                'Database=%s;'
+                'Trusted_Connection=yes;'
+                % (self.server, self.db)) as self.conn:
+            self.cursor = self.conn.cursor()
 
-    except pyodbc.Error as e:
-        print("A generic error has occurred")
-        print(e)
-        teamschat.send_chat(
-            "A generic error has occurred while connecting to SQL"
-        )
-        teamschat.send_chat(e)
-        return False
+            try:
+                self.cursor.execute(
+                    f"SELECT TOP 1 * \
+                    FROM [NetworkAssistant_Alerts].[dbo].[{table}] \
+                    ORDER BY id DESC"
+                )
+                for row in self.cursor:
+                    entry = row
+            except Exception as e:
+                print("SQL execution error")
+                print(e)
+                teamschat.send_chat(
+                    "An error has occurred while reading from the SQL database"
+                )
+                return False
 
-    cursor = conn.cursor()
-
-    return conn, cursor
-
-
-# Neatly close the connection to the database
-def close(connector):
-    '''
-    Neatly close the connection to the database
-    Pass the connection object;
-    The tuple with the connection and cursor objects
-    '''
-    connector[1].close()
-    connector[0].close()
-
-
-# Add data to a table
-# Pass the table name and a dictionary of columns to update and their values
-def add(table, fields, connector):
-    '''
-    Add data to a table
-    Pass the table name, the fields to write,
-    and the connector object of the database
-    Returns True if successful, and False if not
-    '''
-
-    # Create empty strings for columns and corresponding values
-    columns = ''
-    values = '('
-
-    # Populate the columns and values
-    for field in fields:
-        columns += field + ', '
-        values += str(fields[field]) + ', '
-    # print(f"DEBUG (Values): {values}")
-
-    # Clean up the trailing comma, to make this valid
-    columns = columns.strip(", ")
-    values = values.strip(", ")
-
-    # Build the correct string
-    sql_string = f'INSERT INTO {table} ('
-    sql_string += columns
-    sql_string += ')'
-
-    sql_string += '\nVALUES '
-    sql_string += values + ');'
-
-    if GLOBAL['flask_debug']:
-        print("DEBUG (sql.py):", sql_string)
-
-    try:
-        connector[1].execute(sql_string)
-    except Exception as e:
-        print("SQL execution error")
-        print(e)
-        teamschat.send_chat("An error has occurred while writing to SQL")
-        return False
-
-    try:
-        connector[0].commit()
-    except Exception as e:
-        print("SQL commit error")
-        print(e)
-        teamschat.send_chat("An error has occurred while writing to SQL")
-        return False
-
-    return True
+            return entry
