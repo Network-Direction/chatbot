@@ -1,9 +1,13 @@
 # Note: indendentation is important
 # Verify formatting here: https://yaml-online-parser.appspot.com/
 
-# This file contains configuration information for the junos plugin
+# This file contains configuration information for the Log Insight plugin
 
+# WARNING: Log Insight sends the username and password in clear text (confirmed on 8.4)
+# Log Insight supports a username and password, in two different headers
 config:
-  webhook_secret: 'Secret'
-  auth_header: ''
+  webhook_secret: 'Password00'
+  webhook_user: 'jeff'
+  auth_header: 'Authorization-User'
+  auth_header_secret: 'Authorization-Password'
 

@@ -16,41 +16,23 @@ Author:
 """
 
 
-import yaml
+# import yaml
 from core import teamschat
-from core import sql
-import socket
-import struct
+from core import plugin
 from datetime import datetime
+import termcolor
 
 
 # Location of the config file
 LOCATION = 'plugins\\loginsight\\config.yaml'
 
 
-class LogInsight:
+class LogInsight(plugin.PluginTemplate):
+    # Initialise the class from the inherited class
     def __init__(self):
-        '''Initialise the class, load config'''
-        # Empty variables for later
-        self.config = {}
+        super().__init__(LOCATION)
 
-        # Read the YAML file
-        with open(LOCATION) as config:
-            try:
-                self.config = yaml.load(config, Loader=yaml.FullLoader)
-
-            # Handle problems with YAML syntax
-            except yaml.YAMLError as err:
-                print('Error parsing config file, exiting')
-                print('Check the YAML formatting at \
-                    https://yaml-online-parser.appspot.com/')
-                print(err)
-                return False
-
-        # Setup webhook authentication
-        self.auth_header = self.config['config']['auth_header']
-        self.webhook_secret = self.config['config']['webhook_secret']
-
+    # Handle the webhook
     def handle_event(self, raw_response, src):
         '''Handle webhooks when the are sent'''
         # Add the sending IP to the event
@@ -68,60 +50,84 @@ class LogInsight:
         # Log the message, and send to teams
         self.log(message, raw_response)
 
+    # Parse the message
     def parse_message(self, event):
         message = {}
         message['source'] = event['source']
         message['alert'] = event['alert_name']
         message['time'] = event['timestamp']
-        message['hostname'] = event['messages'][0]['fields'][0]['content']
-        message['description'] = event['messages'][0]['text']
+        try:
+            message['hostname'] = event['messages'][0]['fields'][0]['content']
+        except IndexError:
+            message['hostname'] = 'Log Insight'
+
+        try:
+            message['description'] = event['messages'][0]['text']
+        except IndexError:
+            message['description'] = ''
+        except KeyError:
+            message['description'] = ''
+
         if event['recommendation'] == 'null':
             message['recommendation'] = 'No recommended actions'
         else:
             message['recommendation'] = event['recommendation']
+
         message['url'] = event['url']
         return message
 
-    def refresh(self):
-        '''Refresh the config file on request'''
-        # Read the YAML file
-        with open(LOCATION) as config:
-            try:
-                self.config = yaml.load(config, Loader=yaml.FullLoader)
-
-            # Handle problems with YAML syntax
-            except yaml.YAMLError as err:
-                print('Error parsing config file, exiting')
-                print('Check the YAML formatting at \
-                    https://yaml-online-parser.appspot.com/')
-                print(err)
-                return False
-
+    # Log to Teams and SQL
     def log(self, message, event):
         date = datetime.now().date()
         time = datetime.now().time().strftime("%H:%M:%S")
 
         chat_id = teamschat.send_chat(message)['id']
-        print('Log Insight event:', event)
+        print(termcolor.colored(f"Log Insight event: {event}", "yellow"))
 
-        description = event['messages'][0]['text'].replace("'", "")
+        try:
+            description = event['messages'][0]['text'].replace("'", "")
+        except IndexError:
+            description = ''
+
+        try:
+            hostname = event['messages'][0]['fields'][0]['content']
+        except IndexError:
+            hostname = 'No hostname'
+
         fields = {
-            'device': f"'{event['messages'][0]['fields'][0]['content']}'",
+            'device': f"'{hostname}'",
             'event': f"'{event['source']}'",
             'description': f"'{description}'",
             'logdate': f"'{date}'",
             'logtime': f"'{time}'",
-            'source': f"{ip2integer(event['source'])}",
+            'source': f"{self.ip2integer(event['source'])}",
             'message': f"'{chat_id}'"
         }
 
-        sql_conn = sql.Sql()
-        sql_conn.add('loginsight_events', fields)
+        self.sql_write(database='loginsight_events', fields=fields)
 
+    # Check webhook authentication
+    # This overrides the default implementation from the template
+    # WARNING: Log Insight sends the username and password in clear text
+    def authenticate(self, request, plugin):
+        # Check if there is an authentication header
+        if request.headers[plugin['handler'].auth_header] != 'undefined':
+            username = self.config['config']['webhook_user']
+            password = self.config['config']['webhook_secret']
+            sent_username = \
+                request.headers[plugin['handler'].auth_header]
+            sent_password = \
+                request.headers[plugin['handler'].auth_header_secret]
 
-def ip2integer(ip):
-    """
-    Convert an IP string to long integer
-    """
-    packedIP = socket.inet_aton(ip)
-    return struct.unpack("!L", packedIP)[0]
+            if (username == sent_username) and (password == sent_password):
+                return True
+            else:
+                return False
+
+        # If there is no authentication header
+        else:
+            print(termcolor.colored(
+                'Log Insight: Unauthenticated webhook',
+                "yellow"
+            ))
+            return True
