@@ -29,45 +29,80 @@ MS Teams uses the MS Graph API
       We can decrypt the messages with our private key
     MS will create a session key and encrypt the message with that
       The session key is different for each message
-    The session key is encrypted with our public key        
+    The session key is encrypted with our public key
+    
+## Generating Public/Private Key Pair
 
 
 &nbsp;<br>
 - - - -
 ## teamschat.py
 ### send_chat()
-Arguments: message  
-* This is the text that we want to send to teams, formatted as HTML  
-Returns: None  
-Purpose:  
-  (1) Reads the token from token.txt, and confirms it is valid  
-  (2) Connect to the Graph API using the requests module  
-  (3) Check the response, and handle 401 and 429 errors  
+    Arguments: message  
+        This is the text that we want to send to teams, formatted as HTML  
+    Returns: None  
+    Purpose:  
+        (1) Reads the token from token.txt, and confirms it is valid  
+        (2) Connect to the Graph API using the requests module  
+        (3) Check the response, and handle 401 and 429 errors  
   
-
 
 &nbsp;<br>
 - - - -
 ## crypto.py
+The private key should be a file named 'private.pem', which should be kept in the core folder
+The public key should be a file named 'public.pem', which should be kept in the core folder
+
+### rsa_decrypt()
+    Arguments: 
+        encrypted_symmetric_key
+    Returns:
+        decrypted_symmetric_key
+    Purpose:
+        Takes a symmetric key (encrypted) as it appears in the webhook
+        Uses the private key to decrypt it
+    
+### validate()
+    Arguments: 
+        decrypted_symmetric_key
+        data
+        signature
+    Returns:
+        True or False
+    Purpose:
+        Creates a hash of the body of the webhook, using the symmetric key and HMAC-SHA-256
+        Compare the result to the signature contained in the webhook
+        Returns True if there is a match (a valid webhook)
+    
+### aes_decrypt()
+    Arguments: 
+        decrypted_symmetric_key
+        data
+    Returns:
+        decrypted_payload
+    Purpose:
+        Uses the symmetric key to decrypt the message in the webhook
 
 
 &nbsp;<br>
 - - - -
 ## parse_chats.py
+    Arguments: 
+    Returns:
+    Purpose:
 
 
 &nbsp;<br>
 - - - -
 ## smtp.py
-Used to alert someone if there's problems sending over teams  
-This is not intended to be used for regular notifications  
+    Used to alert someone if there's problems sending over teams  
+    This is not intended to be used for regular notifications  
 
 ### send_mail()
-Arguments: message  
-* The message that should be converted to an email  
-
-Returns: None  
-Purpose: Takes a message, and converts it to MIMEText. Then sends email using the details in config.yaml  
+    Arguments: message  
+        The message that should be converted to an email  
+    Returns: None  
+    Purpose: Takes a message, and converts it to MIMEText. Then sends email using the details in config.yaml  
 
 
 
