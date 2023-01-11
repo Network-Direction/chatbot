@@ -65,13 +65,15 @@ This has been tested with Log Insight 8.6
 #### parse_message(event)
     Takes the events, and puts them into a standard dictionary for better handling
 
-#### refresh()
-    Reloads the config file when called
-    This can be called on a regular interval to load changes in config, without restarting the Flask process
-    
 #### log(message, event)
     Takes a message (as output to teams), and an event (dictionary of event information)
     Prints the event to the terminal
     Sends the message to teams
     Logs the details in SQL
 
+#### authenticate(request, plugin)
+    Checks webhook is valid
+    The webhook is sent with a username and password in the HTTP header (in CLEARTEXT)
+    The names of the headers are in config.yaml
+    The user and secret are also in config.yaml
+    The values in the headers are validated against the ones in the config file
