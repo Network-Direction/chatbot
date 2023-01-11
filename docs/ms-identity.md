@@ -41,11 +41,10 @@ Authentication must first happen with the Identity Platform
   The token refresh timer starts in a separate thread, so it's not blocking any other processes  
 
 ## azureauth.py
-### To Do
-  (1) Move App ID, Secret, Tenant to a separate config file  
-  (2) Retry token refresh if it fails  
+  Contains the AzureAuth() class
+  Create an AzureAuth object, and then call client_auth() to authenticate
 
-### Global
+### __init__()
   Creates an application with the MSAL library to connect to the identity services API  
   This uses an application ID, client secret, tenant, and scope (permissions)  
   
