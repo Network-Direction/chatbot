@@ -37,11 +37,6 @@ Handles webhooks from the Juniper Mist cloud
     Standalone script that connects to the SQL server (as globally defined in the app)
     Creates the table and required fields
 
-### mistdebug.py
-    Used when debugging is enabled
-    Opens a log file, and writes entries to the file
-    Contained within the 'log' subdirectory of the plugin
-
 ### misthandler.py
     The main class of the plugin (MistHandler)
     
