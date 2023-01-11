@@ -25,6 +25,34 @@ While much of this is customized, there are some guidelines that must be followe
     Optionally, consider creating a standalone SQL script to create tables and fields in an SQL DB
     
     
+### Modules
+    Several modules will need to be imported:
+        - yaml
+        - socket
+        - struct
+        - termcolor
+        - sql (from core)
+        - hash (from core)
+        
+        
+### Template
+    In the 'core' folder there is a plugin.py file, containing the PluginTemplate() class
+    This class can be inherited by other plugins to make them simpler and standardized
+        These methods can be overwritten by a plugin, or not inherited at all
+    The template contains:
+        - __init__()
+            Initialise the class
+            Read the config.yaml file
+        - ip2integer()
+            Convert an IP address to an integer
+        - refresh()
+            Reread the config.yaml file (eg, if there have been changes)
+        - sql_write()
+            Write entries to an SQL database
+        - authenticate()
+            Authenticate a webhook
+    
+    
 ### Class
     The plugin will need a class with these methods as a minimum (names can be customised):
         __init__() - Reads the configuration file
@@ -50,3 +78,10 @@ While much of this is customized, there are some guidelines that must be followe
             'plugins' - Represents the plugins folder (do not change)
             plugin folder - The folder the plugin is stored in
             module - The mpodule name (the python file to import into the app)
+            
+            
+ ### Authentication
+    Webhooks should be authenticated when the arrive
+    The plugin template class has a method to authenticate webhooks, which compares headers in the webhook with configured values
+    However each source system uses different settings, so a custom method may need to be written for the plugin
+    
