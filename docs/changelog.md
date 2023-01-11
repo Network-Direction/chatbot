@@ -1,6 +1,21 @@
 # Change Log
 
 &nbsp;<br>
+## 0.6
+### General
+    Added colours to terminal logging
+    Added support to send messages to the chatbot. This is very rudimentary at this stage, and is only used for testing
+        Try typing 'hi' or 'tell me a joke'
+    
+### Azure Authentication
+    Converted 'azureauth' to a class
+    Added support for users other than the logged in one (configure in config.yaml)
+
+### Plugins
+    Added a template for plugins, to make plugin creation simpler
+    Fixed a bug in the plugin loader
+
+&nbsp;<br>
 ## 0.5
 ### General Updates
     Updated token read/write to use 'with'
