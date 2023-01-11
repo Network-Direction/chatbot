@@ -63,8 +63,8 @@ MS Teams uses the MS Graph API
 &nbsp;<br>
 - - - -
 ## crypto.py
-The private key should be a file named 'private.pem', which should be kept in the core folder
-The public key should be a file named 'public.pem', which should be kept in the core folder
+    The private key should be a file named 'private.pem', which should be kept in the core folder
+    The public key should be a file named 'public.pem', which should be kept in the core folder
 
 ### rsa_decrypt()
     Arguments: 
@@ -100,9 +100,19 @@ The public key should be a file named 'public.pem', which should be kept in the 
 &nbsp;<br>
 - - - -
 ## parse_chats.py
-    Arguments: 
+    Parses messages sent to the chatbot, so it can respond
+    This has only basic functionality at this time (eg, say 'hi' or 'tell me a joke')
+
+### parse()
+    Arguments:
+        message
+        sender
     Returns:
+        none
     Purpose:
+        Checks if the message sender is the chatbot itself (it shouldn't reply to itself after all)
+        Checks if the message is a known value (eg, 'hi' or 'tell me a joke') and responds
+        If the message is anything else, it plays the message back to the sender
 
 
 &nbsp;<br>
