@@ -6,6 +6,12 @@ MS Teams uses the MS Graph API
     To send chat messages to teams from the chatbot, we must first be authenticated. See ms-identity.txt to understand this process  
     There is a simple function called send_chat() which will send a message to the Graph API, along with the bearer token  
     
+### Quiet Time
+    Quiet time is defined by the 'sleep_time' and 'wake_time' values in the config.yaml file
+    The chatbot will 'sleep', meaning that it will not send messages to Teams. It will still log to SQL
+    Any of these suppressed messages are logged in SQL with a chat ID of '0'
+    Set the sleep and wake times to be the same to disable Quiet Time
+    
 ## Talking to the Chatbot
     Users can send messages to the chatbot; This only has rudimentary functionality at this time (v0.6) for testing
     
