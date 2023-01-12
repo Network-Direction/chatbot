@@ -10,6 +10,8 @@ global:
   db_server: 'DB-Server'
   db_name: 'DB-Name'
   chatbot_name: 'Steve'
+  sleep_time: '17:00:00'
+  wake_time: '09:30:00'
 
 
 # Enabled plugins
