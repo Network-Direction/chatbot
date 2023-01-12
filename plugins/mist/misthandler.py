@@ -22,43 +22,20 @@ Author:
     Luke Robertson - November 2022
 """
 
-from core import sql, teamschat
-from plugins.mist.mistdebug import MistDebug
-import yaml
+from core import teamschat
+from core import plugin
+# from core import sql
 from datetime import datetime
-import socket
-import struct
+import termcolor
 
 
 LOCATION = 'plugins\\mist\\mist-config.yaml'
 
 
 # Create a class to handle Mist webhooks
-class MistHandler:
+class MistHandler(plugin.PluginTemplate):
     def __init__(self):
-        # Empty variables for later
-        self.alert_levels = {}
-        self.logfile = ''
-
-        # Read the YAML file
-        with open(LOCATION) as config:
-            try:
-                self.alert_levels = yaml.load(config, Loader=yaml.FullLoader)
-
-            # Handle problems with YAML syntax
-            except yaml.YAMLError as err:
-                print('Error parsing config file, exiting')
-                print('Check the YAML formatting at \
-                    https://yaml-online-parser.appspot.com/')
-                print(err)
-                return False
-
-        if self.alert_levels['config']['debug']:
-            self.log = MistDebug()
-
-        # Setup webhook authentication
-        self.auth_header = self.alert_levels['config']['auth_header']
-        self.webhook_secret = self.alert_levels['config']['webhook_secret']
+        super().__init__(LOCATION)
 
     # Each alert has a different priority, which admins assign
     # These priorities are defined in mist-config.yaml
@@ -66,28 +43,28 @@ class MistHandler:
         '''Takes given events, and adds a priority level'''
         match event['event']:
             case 'device_event':
-                if event['type'] in self.alert_levels['device_event']:
+                if event['type'] in self.config['device_event']:
                     # Check if this alert has a subpriority
                     # (the 'default' keyword must be there)
-                    if 'default' in str(self.alert_levels['device_event']
+                    if 'default' in str(self.config['device_event']
                                         [event['type']]):
                         # Set the default priority
-                        event['level'] = (self.alert_levels['device_event']
+                        event['level'] = (self.config['device_event']
                                           [event['type']]['default'])
 
                         # Check if there is a more specific priority
-                        for entry in (self.alert_levels['device_event']
-                                                       [event['type']]):
+                        for entry in (self.config['device_event']
+                                                 [event['type']]):
                             if entry == 'default':
                                 break
                             if entry in event['text']:
-                                event['level'] = (self.alert_levels
+                                event['level'] = (self.config
                                                   ['device_event']
                                                   [event['type']][entry])
 
                     # An alert with no sub priority
                     else:
-                        event['level'] = (self.alert_levels['device_event']
+                        event['level'] = (self.config['device_event']
                                           [event['type']])
                 else:
                     event['level'] = 1
@@ -105,22 +82,22 @@ class MistHandler:
 
                 # Split the 'task' field, to just read the part before the
                 # description; This matches the entry in the YAML file
-                if event['task'].split(' "')[0] in self.alert_levels['audit']:
-                    event['level'] = (self.alert_levels['audit']
+                if event['task'].split(' "')[0] in self.config['audit']:
+                    event['level'] = (self.config['audit']
                                       [event['task'].split(' "')[0]])
                 else:
                     event['level'] = 1
 
             case 'alarm':
-                if event['type'] in self.alert_levels['alarm']:
-                    event['level'] = (self.alert_levels['alarm']
+                if event['type'] in self.config['alarm']:
+                    event['level'] = (self.config['alarm']
                                       [event['type']])
                 else:
                     event['level'] = 1
 
             case 'updown':
-                if event['err_type'] in self.alert_levels['updown']:
-                    event['level'] = (self.alert_levels['updown']
+                if event['err_type'] in self.config['updown']:
+                    event['level'] = (self.config['updown']
                                       [event['err_type']])
                 else:
                     event['level'] = 1
@@ -213,12 +190,9 @@ class MistHandler:
         # Parse the message
         event = self.alert_parse(raw_response)
 
-        if self.alert_levels['config']['debug']:
-            self.log.log_entry(str(event))
-
         # Filter events
         # These are just keywords that we want to avoid
-        for item in self.alert_levels['filter']:
+        for item in self.config['filter']:
             if item in str(event):
                 print('filtering out an event')
                 return
@@ -260,23 +234,23 @@ class MistHandler:
                 case 1:
                     if 'before' in event:
                         # Find the difference
-                        new = []
+                        old_config = []
                         for line in str(event['before']).split(", "):
                             if line not in str(event['after']).split(", "):
-                                new.append(line)
+                                old_config.append(line)
 
-                        previous = []
+                        new_config = []
                         for line in str(event['after']).split(", "):
                             if line not in str(event['before']).split(", "):
-                                previous.append(line)
+                                new_config.append(line)
 
                         message = f"<b><span style=\"color:Yellow\"> \
                             {event['admin']}</span></b> just worked on the \
                             <span style=\"color:Lime\"><b>{event['site']}</b> \
                             </span> site<br> The completed task was: <b> \
                             <span style=\"color:Orange\">{event['task']} \
-                            </span></b>.<br> Previous config: <br>{previous} \
-                            <br> <br>New config: <br>{new}"
+                            </span></b>.<br> New config: <br>{new_config} \
+                            <br> <br>Old config: <br>{old_config}"
                     else:
                         message = f"<b><span style=\"color:Yellow\"> \
                         {event['admin']}</span></b> worked on to the  \
@@ -344,80 +318,64 @@ class MistHandler:
         # Handle anything unexpected
         else:
             message = event
-            print(event)
+            print(termcolor.colored(event), "red")
 
-        # Send the message to Teams
+        # Write the entry to the database
+        if event['level'] != 4:
+            self.log(message, event)
+
+    # Send a message to teams, and write to SQL
+    def log(self, message, event):
+        """
+        Send a message to Teams, and log to the SQL server
+        """
+        date = datetime.now().date()
+        time = datetime.now().time().strftime("%H:%M:%S")
+        ip_decimal = self.ip2integer(event['src_ip'])
+
+        # Different event types have different fields
+        # Some need to be handled a little differently
+        if event['event'] == 'device_event':
+            device = event['name']
+            description = event['text']
+            type = event['type']
+
+        elif event['event'] == 'alarm':
+            device = ''
+            for mist_device in event['devices']:
+                device += ', ' + mist_device
+            description = ''
+            type = event['type']
+
+        elif event['event'] == 'audit':
+            device = ''
+            description = event['task'].replace("[", "").replace("]", "") \
+                .replace("'", "")
+            type = event['task'].split(" ", 1)[0]
+
+        elif event['event'] == 'updown':
+            device = event['name']
+            type = event['err_type']
+            description = ''
+
+        # Print to the terminal
+        print(termcolor.colored(event, "yellow"))
+
+        # Send the message to teams
         chat_id = ''
         if message:
             chat_id = teamschat.send_chat(message)['id']
 
-        # Write the entry to the database
-        if event['level'] != 4:
-            print(event)
+        # Log to SQL
+        fields = {
+            'device': f"'{device}'",
+            'site': f"'{event['site']}'",
+            'event': f"'{type}'",
+            'description': f"'{description}'",
+            'logdate': f"'{date}'",
+            'logtime': f"'{time}'",
+            'source': f"{ip_decimal}",  # IP address needs to be decimal
+            'message': f"'{chat_id}'"
+        }
 
-            date = datetime.now().date()
-            time = datetime.now().time().strftime("%H:%M:%S")
-            ip_decimal = ip2integer(event['src_ip'])
-
-            # Different event types have different fields
-            # Some need to be handled a little differently
-            if event['event'] == 'device_event':
-                device = event['name']
-                description = event['text']
-                type = event['type']
-
-            elif event['event'] == 'alarm':
-                device = ''
-                for mist_device in event['devices']:
-                    device += ', ' + mist_device
-                description = ''
-                type = event['type']
-
-            elif event['event'] == 'audit':
-                device = ''
-                description = event['task'].replace("[", "").replace("]", "") \
-                    .replace("'", "")
-                type = event['task'].split(" ", 1)[0]
-
-            elif event['event'] == 'updown':
-                device = event['name']
-                type = event['err_type']
-                description = ''
-
-            fields = {
-                'device': f"'{device}'",
-                'site': f"'{event['site']}'",
-                'event': f"'{type}'",
-                'description': f"'{description}'",
-                'logdate': f"'{date}'",
-                'logtime': f"'{time}'",
-                'source': f"{ip_decimal}",  # IP address needs to be decimal
-                'message': f"'{chat_id}'"
-            }
-
-            sql_conn = sql.Sql()
-            sql_conn.add('mist_events', fields)
-
-    # Refresh the alert levels
-    # Reread the config file
-    def refresh(self):
-        # Read the YAML file
-        with open(LOCATION) as config:
-            try:
-                self.alert_levels = yaml.load(config, Loader=yaml.FullLoader)
-
-            # Handle problems with YAML syntax
-            except yaml.YAMLError as err:
-                print('Error parsing config file, exiting')
-                print('Check the YAML formatting at \
-                    https://yaml-online-parser.appspot.com/')
-                print(err)
-                return False
-
-
-def ip2integer(ip):
-    """
-    Convert an IP string to long integer
-    """
-    packedIP = socket.inet_aton(ip)
-    return struct.unpack("!L", packedIP)[0]
+        self.sql_write(database='mist_events', fields=fields)
