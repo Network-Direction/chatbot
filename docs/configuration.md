@@ -32,6 +32,12 @@
       This applies to Flask, as well as to SQL (log the query strings sent to the SQL server)
     db_server - The name or IP address of the database server
     db_name - The name of the database
+    chatbot_name - The name of the chatbot (so it won't respond to its own teams messages)
+    sleep_time - The time at which 'quiet time' begins
+    wake_time - The time at which 'quiet time' ends
+    
+    Note, if the sleep and wake times are the same, Quiet Time is effectively disabled
+    
 
 &nbsp;<br>
 ### Plugins
