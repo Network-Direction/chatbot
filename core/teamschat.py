@@ -29,7 +29,7 @@ Author:
 
 
 import requests
-from config import GRAPH
+from config import GRAPH, GLOBAL
 import json
 from datetime import datetime, timedelta
 import termcolor
@@ -75,6 +75,18 @@ def send_chat(message):
     and saved in token.txt
     '''
 
+    # Check if this is during a 'quiet time'
+    # If it is, we won't send this to Teams
+    wake = datetime.strptime(GLOBAL['wake_time'], '%H:%M:%S')
+    sleep = datetime.strptime(GLOBAL['sleep_time'], '%H:%M:%S')
+    if not (datetime.now().time() > wake.time() and
+            datetime.now().time() < sleep.time()):
+        print(termcolor.colored(
+            "Quiet time: Suppressing message", "blue"
+        ))
+        value = {'id': '0'}
+        return value
+
     # Make sure authentication is complete first
     full_token = check_token()
 
@@ -85,11 +97,9 @@ def send_chat(message):
     }
     endpoint = GRAPH['base_url'] + 'chats'
 
-    # time = datetime.now().strftime("%I:%M%p").lower()
     body = {
         "body": {
             "contentType": "html",
-            # "content": f"({time}): {message}"
             "content": message
         }
     }
