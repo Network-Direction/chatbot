@@ -1,6 +1,14 @@
 # Change Log
 
 &nbsp;<br>
+## 0.7
+### Quiet Time
+    Added support for a 'quiet time' when the chatbot won't send messages to teams
+    It will still log events to the SQL server
+    This is not plugin dependant
+    This is configured in config.yaml, by changing the 'sleep_time' and 'wake_time' variables
+
+&nbsp;<br>
 ## 0.6
 ### General
     Added colours to terminal logging
