@@ -1,4 +1,11 @@
 # Mist Plugin Changelog
+## 0.7 (13/01/2023)
+### Fixed
+    Fixed a bug where switch config changes would not be reported correctly
+        The 'new' config would be reported as the 'old' config
+
+
+- - - -
 ## 0.6 (11/01/2023)
 ### Changed
     Changed the class to inherit from the plugin template class
