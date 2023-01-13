@@ -17,12 +17,11 @@ Author:
 """
 
 
-import yaml
+# import yaml
 from core import teamschat
-from core import sql
-import socket
-import struct
+from core import plugin
 from datetime import datetime
+import termcolor
 
 
 # Location of the config file
@@ -30,31 +29,9 @@ LOCATION = 'plugins\\junos\\junos-config.yaml'
 
 
 # Junos handler class
-class JunosHandler:
+class JunosHandler(plugin.PluginTemplate):
     def __init__(self):
-        # Empty variables for later
-        self.config = {}
-        self.alert_levels = {}
-
-        # Read the YAML file
-        with open(LOCATION) as config:
-            try:
-                self.config = yaml.load(config, Loader=yaml.FullLoader)
-
-            # Handle problems with YAML syntax
-            except yaml.YAMLError as err:
-                print('Error parsing config file, exiting')
-                print('Check the YAML formatting at \
-                    https://yaml-online-parser.appspot.com/')
-                print(err)
-                return False
-
-        # Setup webhook authentication
-        self.auth_header = self.config['config']['auth_header']
-        self.webhook_secret = self.config['config']['webhook_secret']
-
-        # Initialize alert levels
-        self.alert_levels = self.config['events']
+        super().__init__(LOCATION)
 
     # Handle the event as it comes in
     def handle_event(self, raw_response, src):
@@ -96,8 +73,8 @@ class JunosHandler:
 
     # Assign a priority to an event
     def alert_priority(self, webhook):
-        if webhook['event'] in self.alert_levels:
-            webhook['level'] = self.alert_levels[webhook['event']]
+        if webhook['event'] in self.config['events']:
+            webhook['level'] = self.config['events'][webhook['event']]
         else:
             webhook['level'] = 1
 
@@ -107,7 +84,7 @@ class JunosHandler:
         time = datetime.now().time().strftime("%H:%M:%S")
 
         chat_id = teamschat.send_chat(message)['id']
-        print('Junos event:', event)
+        print(termcolor.colored(f"Junos event: {event}", "yellow"))
 
         fields = {
             'device': f"'{event['hostname']}'",
@@ -115,33 +92,11 @@ class JunosHandler:
             'description': f"'{event['message']}'",
             'logdate': f"'{date}'",
             'logtime': f"'{time}'",
-            'source': f"{ip2integer(event['source'])}",
+            'source': f"{self.ip2integer(event['source'])}",
             'message': f"'{chat_id}'"
         }
 
-        sql_conn = sql.Sql()
-        sql_conn.add('junos_events', fields)
-
-    # Refresh the alert levels
-    # Reread the config file
-    def refresh(self):
-        # Read the YAML file
-        with open(LOCATION) as config:
-            try:
-                self.config = yaml.load(config, Loader=yaml.FullLoader)
-
-            # Handle problems with YAML syntax
-            except yaml.YAMLError as err:
-                print('Error parsing config file, exiting')
-                print('Check the YAML formatting at \
-                    https://yaml-online-parser.appspot.com/')
-                print(err)
-                return False
-
-
-def ip2integer(ip):
-    """
-    Convert an IP string to long integer
-    """
-    packedIP = socket.inet_aton(ip)
-    return struct.unpack("!L", packedIP)[0]
+        self.sql_write(
+            database=self.config['config']['sql_table'],
+            fields=fields
+        )
