@@ -16,6 +16,7 @@ While much of this is customized, there are some guidelines that must be followe
     Under the config section there should be:
         'webhook_secret' - Set a secret here, or leave blank for unauthenticated
         'auth_header' - The name of the header that contains the authentication information
+        'sql_table' - The name of the SQL table in the SQL DB
     Additional plugin specific configuration can also be stored here
     
     
