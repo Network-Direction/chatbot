@@ -10,4 +10,5 @@ config:
   webhook_user: 'jeff'
   auth_header: 'Authorization-User'
   auth_header_secret: 'Authorization-Password'
+  sql_table: 'loginsight_events'
 

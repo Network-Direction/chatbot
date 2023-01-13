@@ -104,7 +104,10 @@ class LogInsight(plugin.PluginTemplate):
             'message': f"'{chat_id}'"
         }
 
-        self.sql_write(database='loginsight_events', fields=fields)
+        self.sql_write(
+            database=self.config['config']['sql_table'],
+            fields=fields
+        )
 
     # Check webhook authentication
     # This overrides the default implementation from the template
