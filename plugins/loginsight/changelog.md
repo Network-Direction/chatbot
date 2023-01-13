@@ -1,4 +1,10 @@
 # LogInsight Change Log
+## 0.7 (13/01/2023)
+### Changed
+    Moved the SQL table name into the config file, rather than hardcoding in the plugin
+
+
+- - - -
 ## v0.6 (11-01-2023)
 ### Added
     Added headers in the config.yaml file for authentication
