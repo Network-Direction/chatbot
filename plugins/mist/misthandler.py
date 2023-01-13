@@ -378,4 +378,7 @@ class MistHandler(plugin.PluginTemplate):
             'message': f"'{chat_id}'"
         }
 
-        self.sql_write(database='mist_events', fields=fields)
+        self.sql_write(
+            database=self.config['config']['sql_table'],
+            fields=fields
+        )
