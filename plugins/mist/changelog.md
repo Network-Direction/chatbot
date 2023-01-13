@@ -3,6 +3,10 @@
 ### Fixed
     Fixed a bug where switch config changes would not be reported correctly
         The 'new' config would be reported as the 'old' config
+        
+        
+### Changed
+    Moved the SQL table name into the config file, rather than hardcoding in the plugin
 
 
 - - - -
